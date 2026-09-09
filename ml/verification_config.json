@@ -1,0 +1,7 @@
+{
+  "method": "class_prototype_cosine_similarity",
+  "threshold": 0.44,
+  "image_size": 224,
+  "embedding_dimension": 1280,
+  "num_classes": 22
+}
