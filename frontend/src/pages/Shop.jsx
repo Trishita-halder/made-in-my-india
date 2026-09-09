@@ -16,7 +16,7 @@ function Shop() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        const response = await fetch(`${API_URL}/products`);
+        const response = await fetch(`${API_URL}/api/products`);
 
         if (!response.ok) {
           throw new Error("Failed to load products");
