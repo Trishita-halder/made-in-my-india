@@ -18,7 +18,10 @@ const { verifyImageBuffers } = require("./ml/verifier");
 // ============================================================
 
 const app = express();
-const PORT = 5000;
+
+// Render provides PORT in production.
+// Locally, it will use 5000.
+const PORT = process.env.PORT || 5000;
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL ||
@@ -43,12 +46,18 @@ const supabase = createClient(
 );
 
 // ============================================================
-// EXPRESS
+// CORS
 // ============================================================
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
+    credentials: true,
   })
 );
 
@@ -143,7 +152,10 @@ app.get("/api/products", async (req, res) => {
       });
 
     if (error) {
-      console.error("❌ Supabase products error:");
+      console.error(
+        "❌ Supabase products error:"
+      );
+
       console.error(error);
 
       return res.status(500).json({
@@ -152,7 +164,9 @@ app.get("/api/products", async (req, res) => {
       });
     }
 
-    const products = (data || []).map(formatProduct);
+    const products = (data || []).map(
+      formatProduct
+    );
 
     console.log(
       `Returning ${products.length} published product(s).`
@@ -166,7 +180,10 @@ app.get("/api/products", async (req, res) => {
 
     return res.json(products);
   } catch (error) {
-    console.error("❌ GET /api/products error:");
+    console.error(
+      "❌ GET /api/products error:"
+    );
+
     console.error(error);
 
     return res.status(500).json({
@@ -183,7 +200,9 @@ app.get("/api/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log(`\nGET /api/products/${id}`);
+    console.log(
+      `\nGET /api/products/${id}`
+    );
 
     const { data, error } = await supabase
       .from("products")
@@ -201,7 +220,10 @@ app.get("/api/products/:id", async (req, res) => {
       .single();
 
     if (error) {
-      console.error("❌ Supabase product error:");
+      console.error(
+        "❌ Supabase product error:"
+      );
+
       console.error(error);
 
       return res.status(404).json({
@@ -209,9 +231,12 @@ app.get("/api/products/:id", async (req, res) => {
       });
     }
 
-    const product = formatProduct(data);
+    const product =
+      formatProduct(data);
 
-    console.log(`Image -> ${product.image}`);
+    console.log(
+      `Image -> ${product.image}`
+    );
 
     return res.json(product);
   } catch (error) {
@@ -406,8 +431,11 @@ function craftMatchesPrediction(
   sellerCraft,
   predictedClass
 ) {
-  const seller = normalizeText(sellerCraft);
-  const predicted = normalizeText(predictedClass);
+  const seller =
+    normalizeText(sellerCraft);
+
+  const predicted =
+    normalizeText(predictedClass);
 
   if (!seller || !predicted) {
     return false;
@@ -426,7 +454,8 @@ function craftMatchesPrediction(
     craftAliases[predicted] || [];
 
   return aliases.some(
-    (alias) => normalizeText(alias) === seller
+    (alias) =>
+      normalizeText(alias) === seller
   );
 }
 
@@ -442,16 +471,24 @@ function checkMetadataConsistency(
   const contradictions = [];
 
   const makingMethod =
-    String(product.making_method || "").trim();
+    String(
+      product.making_method || ""
+    ).trim();
 
   const district =
-    String(product.district || "").trim();
+    String(
+      product.district || ""
+    ).trim();
 
   const giInfo =
-    String(product.gi_info || "").trim();
+    String(
+      product.gi_info || ""
+    ).trim();
 
   const giReference =
-    String(product.gi_reference || "").trim();
+    String(
+      product.gi_reference || ""
+    ).trim();
 
   const sellerCraft =
     normalizeText(product.craft);
@@ -513,7 +550,9 @@ function checkMetadataConsistency(
   ];
 
   for (const term of suspiciousTerms) {
-    if (searchableText.includes(term)) {
+    if (
+      searchableText.includes(term)
+    ) {
       contradictions.push(
         `Suspicious manufacturing term: "${term}"`
       );
@@ -536,7 +575,10 @@ function checkMetadataConsistency(
     );
   }
 
-  if (giInfo && !giReference) {
+  if (
+    giInfo &&
+    !giReference
+  ) {
     warnings.push(
       "GI information provided without a GI reference."
     );
@@ -587,9 +629,14 @@ function determineVerificationDecision(
     cvResult.cvDecision === "fail"
   ) {
     return {
-      authentication_status: "rejected",
-      listing_status: "rejected",
-      reason: "ML verification failed.",
+      authentication_status:
+        "rejected",
+
+      listing_status:
+        "rejected",
+
+      reason:
+        "ML verification failed.",
     };
   }
 
@@ -601,9 +648,14 @@ function determineVerificationDecision(
     cvResult.cvDecision === "review"
   ) {
     return {
-      authentication_status: "review",
-      listing_status: "pending",
-      reason: "ML result requires review.",
+      authentication_status:
+        "review",
+
+      listing_status:
+        "pending",
+
+      reason:
+        "ML result requires review.",
     };
   }
 
@@ -616,8 +668,12 @@ function determineVerificationDecision(
     metadataResult.contradictions.length > 0
   ) {
     return {
-      authentication_status: "review",
-      listing_status: "pending",
+      authentication_status:
+        "review",
+
+      listing_status:
+        "pending",
+
       reason:
         "ML prediction and seller metadata are inconsistent.",
     };
@@ -628,8 +684,12 @@ function determineVerificationDecision(
   // ----------------------------------------------------------
 
   return {
-    authentication_status: "verified",
-    listing_status: "published",
+    authentication_status:
+      "verified",
+
+    listing_status:
+      "published",
+
     reason:
       "ML verification and metadata checks passed.",
   };
@@ -642,47 +702,159 @@ function determineVerificationDecision(
 app.post(
   "/api/products",
   upload.array("images", 10),
+
   async (req, res) => {
     try {
-      console.log(
-        "\n========================================"
+      // ========================================================
+      // AUTHENTICATED SELLER
+      // ========================================================
+
+      const authHeader =
+        req.headers.authorization || "";
+
+      if (
+        !authHeader.startsWith(
+          "Bearer "
+        )
+      ) {
+        return res.status(401).json({
+          error:
+            "You must be logged in to sell a product.",
+        });
+      }
+
+      const accessToken =
+        authHeader
+          .replace("Bearer ", "")
+          .trim();
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser(
+        accessToken
       );
 
-      console.log(
-        "NEW PRODUCT SUBMISSION"
-      );
+      if (
+        authError ||
+        !user
+      ) {
+        console.error(
+          "❌ Authentication failed:"
+        );
+
+        console.error(
+          authError
+        );
+
+        return res.status(401).json({
+          error:
+            "Your login session is invalid or expired.",
+        });
+      }
 
       console.log(
-        "========================================"
+        `Authenticated seller: ${user.id}`
       );
 
-      // --------------------------------------------------------
+      // ========================================================
+      // ENSURE PROFILE EXISTS
+      // ========================================================
+
+      const {
+        data: existingProfile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error(
+          "❌ Profile lookup failed:"
+        );
+
+        console.error(
+          profileError
+        );
+
+        return res.status(500).json({
+          error:
+            "Could not verify seller profile.",
+        });
+      }
+
+      if (!existingProfile) {
+        const {
+          error:
+            createProfileError,
+        } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+
+            full_name:
+              user.user_metadata
+                ?.full_name ||
+              user.user_metadata?.name ||
+              "",
+
+            phone:
+              user.user_metadata?.phone ||
+              "",
+          });
+
+        if (
+          createProfileError
+        ) {
+          console.error(
+            "❌ Profile creation failed:"
+          );
+
+          console.error(
+            createProfileError
+          );
+
+          return res.status(500).json({
+            error:
+              "Could not create seller profile.",
+          });
+        }
+      }
+
+      // ========================================================
       // IMAGES
-      // --------------------------------------------------------
+      // ========================================================
 
-      const files = req.files || [];
+      const files =
+        req.files || [];
 
       console.log(
         `Received ${files.length} image(s).`
       );
 
-      if (files.length < 2) {
+      if (
+        files.length < 2
+      ) {
         return res.status(400).json({
           error:
             "At least 2 product images are required.",
         });
       }
 
-      if (files.length > 10) {
+      if (
+        files.length > 10
+      ) {
         return res.status(400).json({
           error:
             "Maximum 10 product images are allowed.",
         });
       }
 
-      // --------------------------------------------------------
+      // ========================================================
       // PRODUCT DATA
-      // --------------------------------------------------------
+      // ========================================================
 
       const productData = {
         name:
@@ -732,63 +904,84 @@ app.post(
 
         price:
           req.body.price
-            ? Number(req.body.price)
+            ? Number(
+                req.body.price
+              )
             : null,
 
         stock:
           req.body.stock
-            ? Number(req.body.stock)
+            ? Number(
+                req.body.stock
+              )
             : 0,
 
         shipping_info:
-          req.body.shipping_info || null,
+          req.body.shipping_info ||
+          null,
 
         dispatch_time:
-          req.body.dispatch_time || null,
+          req.body.dispatch_time ||
+          null,
 
         seller_phone:
-          req.body.seller_phone || null,
+          req.body.seller_phone ||
+          null,
 
         seller_email:
-          req.body.seller_email || null,
+          req.body.seller_email ||
+          null,
 
+        // IMPORTANT:
+        // seller_id comes from the
+        // authenticated Supabase user.
         seller_id:
-          req.body.seller_id || null,
+          user.id,
       };
 
-      // --------------------------------------------------------
+      // ========================================================
       // BASIC VALIDATION
-      // --------------------------------------------------------
+      // ========================================================
 
-      if (!productData.name) {
+      if (
+        !productData.name
+      ) {
         return res.status(400).json({
           error:
             "Product name is required.",
         });
       }
 
-      if (!productData.craft) {
+      if (
+        !productData.craft
+      ) {
         return res.status(400).json({
           error:
             "Craft is required.",
         });
       }
 
-      if (!productData.category) {
+      if (
+        !productData.category
+      ) {
         return res.status(400).json({
           error:
             "Category is required.",
         });
       }
 
-      if (!productData.state) {
+      if (
+        !productData.state
+      ) {
         return res.status(400).json({
           error:
             "State is required.",
         });
       }
 
-      if (!productData.material) {
+      if (
+        !productData.material
+      ) {
         return res.status(400).json({
           error:
             "Material is required.",
@@ -805,7 +998,8 @@ app.post(
 
       const imageBuffers =
         files.map(
-          (file) => file.buffer
+          (file) =>
+            file.buffer
         );
 
       const cvResult =
@@ -888,11 +1082,15 @@ app.post(
         error: productError,
       } = await supabase
         .from("products")
-        .insert(productInsert)
+        .insert(
+          productInsert
+        )
         .select()
         .single();
 
-      if (productError) {
+      if (
+        productError
+      ) {
         console.error(
           "❌ Product insert failed:"
         );
@@ -918,19 +1116,23 @@ app.post(
       // UPLOAD IMAGES
       // ========================================================
 
-      const uploadedImages = [];
+      const uploadedImages =
+        [];
 
       for (
         let i = 0;
         i < files.length;
         i++
       ) {
-        const file = files[i];
+        const file =
+          files[i];
 
         const extension =
-          path.extname(
-            file.originalname
-          ).toLowerCase() ||
+          path
+            .extname(
+              file.originalname
+            )
+            .toLowerCase() ||
           ".jpg";
 
         const allowedExtensions = [
@@ -954,28 +1156,32 @@ app.post(
           `Uploading image ${i + 1}/${files.length}...`
         );
 
-        // ------------------------------------------------------
+        // ======================================================
         // STORAGE
-        // ------------------------------------------------------
+        // ======================================================
 
         const {
           error: uploadError,
-        } =
-          await supabase.storage
-            .from("product-images")
-            .upload(
-              fileName,
-              file.buffer,
-              {
-                contentType:
-                  file.mimetype ||
-                  "image/jpeg",
+        } = await supabase.storage
+          .from(
+            "product-images"
+          )
+          .upload(
+            fileName,
+            file.buffer,
+            {
+              contentType:
+                file.mimetype ||
+                "image/jpeg",
 
-                upsert: false,
-              }
-            );
+              upsert:
+                false,
+            }
+          );
 
-        if (uploadError) {
+        if (
+          uploadError
+        ) {
           console.error(
             "❌ Image upload failed:"
           );
@@ -1001,15 +1207,17 @@ app.post(
           });
         }
 
-        // ------------------------------------------------------
+        // ======================================================
         // PUBLIC URL
-        // ------------------------------------------------------
+        // ======================================================
 
         const {
           data: publicUrlData,
         } =
           supabase.storage
-            .from("product-images")
+            .from(
+              "product-images"
+            )
             .getPublicUrl(
               fileName
             );
@@ -1021,9 +1229,9 @@ app.post(
           `Image URL: ${imageUrl}`
         );
 
-        // ------------------------------------------------------
+        // ======================================================
         // IMAGE DATABASE RECORD
-        // ------------------------------------------------------
+        // ======================================================
 
         const imageType =
           i === 0
@@ -1032,24 +1240,28 @@ app.post(
 
         const {
           data: imageRecord,
-          error: imageDbError,
-        } =
-          await supabase
-            .from("product_images")
-            .insert({
-              product_id:
-                product.id,
+          error:
+            imageDbError,
+        } = await supabase
+          .from(
+            "product_images"
+          )
+          .insert({
+            product_id:
+              product.id,
 
-              image_url:
-                imageUrl,
+            image_url:
+              imageUrl,
 
-              image_type:
-                imageType,
-            })
-            .select()
-            .single();
+            image_type:
+              imageType,
+          })
+          .select()
+          .single();
 
-        if (imageDbError) {
+        if (
+          imageDbError
+        ) {
           console.error(
             "❌ Image database insert failed:"
           );
@@ -1173,7 +1385,6 @@ app.post(
             metadataResult.contradictions,
         },
       });
-
     } catch (error) {
       console.error(
         "\n❌ PRODUCT SUBMISSION ERROR:"
@@ -1212,7 +1423,7 @@ app.listen(
     );
 
     console.log(
-      `Backend running on http://localhost:${PORT}`
+      `Backend running on port ${PORT}`
     );
 
     console.log(

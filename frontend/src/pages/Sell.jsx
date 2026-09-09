@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -137,6 +138,14 @@ const handleImages = (e) => {
       setLoading(true);
       setStatus("");
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("Please log in before submitting a product.");
+      }
+
       const formData = new FormData();
 
       Object.entries(form).forEach(([key, value]) => {
@@ -149,6 +158,9 @@ const handleImages = (e) => {
 
       const response = await fetch(`${API_URL}/api/products`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 
