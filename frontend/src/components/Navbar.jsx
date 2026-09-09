@@ -63,12 +63,6 @@ function Navbar() {
             🛒
           </Link>
 
-          <Link
-            to="/login"
-            className="rounded-full border border-[#8a6544] px-4 py-2 text-sm font-semibold text-[#5c1823] transition hover:bg-[#731f2b] hover:text-white"
-          >
-            Account
-          </Link>
         </div>
       </div>
 
